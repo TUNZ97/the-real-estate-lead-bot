@@ -11,16 +11,18 @@ It receives natural-language property enquiries, extracts structured requirement
 ```text
 Customer → React / Channel → FastAPI → n8n → AI + Notifications
                                 ↓
-                           PostgreSQL (source of truth)
+                           MySQL (local development)
 ```
 
-| Component   | Responsibility                                      |
-|-------------|-----------------------------------------------------|
-| React       | Presentation, chat, sales dashboard                 |
-| FastAPI     | API, validation, domain rules, auth, DB access      |
-| n8n         | Workflow orchestration, scheduling, notifications   |
-| AI          | NLU, extraction, response drafting (validated)      |
-| PostgreSQL  | Authoritative application state                     |
+| Component | Responsibility |
+|-----------|----------------|
+| React | Presentation, chat, sales dashboard |
+| FastAPI | API, validation, domain rules, auth, DB access |
+| n8n | Workflow orchestration, scheduling, notifications |
+| AI | NLU, extraction, response drafting (validated) |
+| MySQL | Application state for local development |
+
+> Deployment later may use Docker/other databases; **local development uses MySQL on your PC (no Docker required).**
 
 ## Repository structure
 
@@ -30,42 +32,24 @@ Customer → React / Channel → FastAPI → n8n → AI + Notifications
 ├── frontend/         # React (Vite + TypeScript) UI
 ├── n8n/              # Exported n8n workflows
 ├── docs/             # Approved product & technical specifications
-├── tests/            # Cross-cutting and E2E tests
-├── .github/          # CI workflows
-├── docker-compose.yml
+├── tests/
 ├── .env.example
 └── README.md
 ```
 
-## Documentation (source of truth)
+## Documentation
 
-All product and technical decisions live under [`docs/`](./docs/). Start here:
+All product and technical decisions live under [`docs/`](./docs/).  
+**Local runbook (MySQL + npm):** [docs/LOCAL_SETUP_AND_N8N.md](./docs/LOCAL_SETUP_AND_N8N.md)
 
-| Document | Purpose |
-|----------|---------|
-| [PRD.md](./docs/PRD.md) | Product requirements |
-| [REAL_ESTATE_LEAD_BOT.md](./docs/REAL_ESTATE_LEAD_BOT.md) | Product overview & principles |
-| [SYSTEM_ARCHITECTURE.md](./docs/SYSTEM_ARCHITECTURE.md) | Component boundaries |
-| [API_SPECIFICATION.md](./docs/API_SPECIFICATION.md) | HTTP contracts |
-| [DATABASE_DATA_MODEL_SPECIFICATION.md](./docs/DATABASE_DATA_MODEL_SPECIFICATION.md) | PostgreSQL model |
-| [AI_SPECIFICATION.md](./docs/AI_SPECIFICATION.md) | Safe AI usage |
-| [LEAD_QUALIFICATION_SPECIFICATION.md](./docs/LEAD_QUALIFICATION_SPECIFICATION.md) | Deterministic scoring |
-| [N8N_WORKFLOW_SPECIFICATION.md](./docs/N8N_WORKFLOW_SPECIFICATION.md) | Workflows |
-| [UI_UX_SPECIFICATION.md](./docs/UI_UX_SPECIFICATION.md) | Customer & sales UX |
-| [IMPLEMENTATION.md](./docs/IMPLEMENTATION.md) | Phased delivery plan |
-| [DEVELOPMENT_SETUP.md](./docs/DEVELOPMENT_SETUP.md) | Local setup |
-| [TESTING_SPECIFICATION.md](./docs/TESTING_SPECIFICATION.md) | Test strategy |
-| [DEPLOYMENT_SPECIFICATION.md](./docs/DEPLOYMENT_SPECIFICATION.md) | Environments & release |
-| [TASK.md](./docs/TASK.md) | Task system for implementation |
-
-## Quick start (local)
+## Quick start (local — no Docker)
 
 ### Prerequisites
 
 - Python 3.11+
-- Node.js LTS
-- PostgreSQL 15+
-- n8n (local or Docker)
+- Node.js LTS + npm
+- **MySQL** running on your PC (port 3306)
+- n8n via npm (optional): `npm install -g n8n`
 - Git
 
 ### 1. Clone & environment
@@ -74,13 +58,19 @@ All product and technical decisions live under [`docs/`](./docs/). Start here:
 git clone https://github.com/TUNZ97/the-real-estate-lead-bot.git
 cd the-real-estate-lead-bot
 cp .env.example .env
-# Edit .env with your local values
 ```
 
-### 2. Database (Docker)
+Set your MySQL password in `.env`:
 
-```bash
-docker compose up -d postgres
+```text
+DATABASE_URL=mysql+aiomysql://root:YOUR_MYSQL_PASSWORD@127.0.0.1:3306/real_estate_lead_bot
+```
+
+### 2. Create MySQL database
+
+```sql
+CREATE DATABASE IF NOT EXISTS real_estate_lead_bot
+  CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 ```
 
 ### 3. Backend
@@ -88,12 +78,12 @@ docker compose up -d postgres
 ```bash
 cd backend
 python -m venv .venv
-# Windows: .venv\Scripts\activate
-source .venv/bin/activate
+# Windows: .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
-alembic upgrade head
 uvicorn app.main:app --reload --port 8000
 ```
+
+Tables are auto-created on first start in development.
 
 ### 4. Frontend
 
@@ -103,25 +93,28 @@ npm install
 npm run dev
 ```
 
-### 5. n8n
+Open http://localhost:5173
+
+### 5. n8n (optional)
 
 ```bash
 n8n start
-# Import workflows from n8n/workflows/ when available
 ```
+
+Create a **POST** webhook with path `lead-intake` and activate it.
 
 ## Operating principles
 
 - Never fabricate property availability, pricing or facts.
 - Validate all AI structured output before persistence.
 - Qualification and urgency are **deterministic** (not AI judgment).
-- PostgreSQL is the single source of truth.
+- The database is the authoritative application state.
 - Important automated actions are auditable and preferably idempotent.
 - Human handoff is always available.
 
 ## Implementation phases
 
-See [docs/IMPLEMENTATION.md](./docs/IMPLEMENTATION.md). Current focus: **Phase 1 — Project foundation**.
+See [docs/IMPLEMENTATION.md](./docs/IMPLEMENTATION.md).
 
 ## License
 
