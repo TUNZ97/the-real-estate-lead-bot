@@ -1,0 +1,37 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: relb-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: real_estate_lead_bot
+    ports:
+      - "5432:5432"
+    volumes:
+      - relb_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d real_estate_lead_bot"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # Optional local n8n (uncomment when needed)
+  # n8n:
+  #   image: n8nio/n8n:latest
+  #   container_name: relb-n8n
+  #   restart: unless-stopped
+  #   ports:
+  #     - "5678:5678"
+  #   environment:
+  #     - N8N_BASIC_AUTH_ACTIVE=true
+  #     - N8N_BASIC_AUTH_USER=admin
+  #     - N8N_BASIC_AUTH_PASSWORD=changeme
+  #     - WEBHOOK_URL=http://localhost:5678/
+  #   volumes:
+  #     - relb_n8n_data:/home/node/.n8n
+
+volumes:
+  relb_pgdata:
+  # relb_n8n_data:
