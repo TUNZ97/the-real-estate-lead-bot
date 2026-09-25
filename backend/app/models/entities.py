@@ -1,4 +1,4 @@
-"""Core business entities — PostgreSQL is source of truth."""
+"""Core business entities — MySQL for local dev; portable SQLAlchemy types."""
 
 from __future__ import annotations
 
@@ -8,6 +8,7 @@ from decimal import Decimal
 from typing import Any, Optional
 
 from sqlalchemy import (
+    JSON,
     DateTime,
     ForeignKey,
     Index,
@@ -15,8 +16,8 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+    Uuid,
 )
-from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
@@ -25,7 +26,6 @@ from app.models.enums import (
     FollowUpStatus,
     Intent,
     LeadStatus,
-    MessageSender,
     NotificationStatus,
     PropertyType,
     QualificationLevel,
@@ -55,7 +55,7 @@ class Lead(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     )
 
     customer_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("customers.id"), nullable=False, index=True
+        Uuid(as_uuid=True), ForeignKey("customers.id"), nullable=False, index=True
     )
     status: Mapped[str] = mapped_column(
         String(32), default=LeadStatus.NEW.value, nullable=False
@@ -97,10 +97,10 @@ class Conversation(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     __tablename__ = "conversations"
 
     customer_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("customers.id"), nullable=False, index=True
+        Uuid(as_uuid=True), ForeignKey("customers.id"), nullable=False, index=True
     )
     lead_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("leads.id"), nullable=True, index=True
+        Uuid(as_uuid=True), ForeignKey("leads.id"), nullable=True, index=True
     )
     status: Mapped[str] = mapped_column(
         String(32), default=ConversationStatus.ACTIVE.value, nullable=False
@@ -122,14 +122,14 @@ class Message(Base, UUIDPrimaryKeyMixin):
     )
 
     conversation_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("conversations.id"), nullable=False
+        Uuid(as_uuid=True), ForeignKey("conversations.id"), nullable=False
     )
     sender_type: Mapped[str] = mapped_column(String(32), nullable=False)
     content: Mapped[str] = mapped_column(Text, nullable=False)
     external_message_id: Mapped[Optional[str]] = mapped_column(
         String(128), nullable=True
     )
-    meta: Mapped[Optional[dict[str, Any]]] = mapped_column(JSONB, nullable=True)
+    meta: Mapped[Optional[dict[str, Any]]] = mapped_column(JSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False
     )
@@ -141,11 +141,11 @@ class LeadActivity(Base, UUIDPrimaryKeyMixin):
     __tablename__ = "lead_activities"
 
     lead_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("leads.id"), nullable=False, index=True
+        Uuid(as_uuid=True), ForeignKey("leads.id"), nullable=False, index=True
     )
     activity_type: Mapped[str] = mapped_column(String(64), nullable=False)
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    meta: Mapped[Optional[dict[str, Any]]] = mapped_column(JSONB, nullable=True)
+    meta: Mapped[Optional[dict[str, Any]]] = mapped_column(JSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False
     )
@@ -158,7 +158,7 @@ class FollowUp(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     __table_args__ = (Index("ix_follow_ups_due_at", "due_at"),)
 
     lead_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("leads.id"), nullable=False, index=True
+        Uuid(as_uuid=True), ForeignKey("leads.id"), nullable=False, index=True
     )
     due_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     status: Mapped[str] = mapped_column(
@@ -166,7 +166,7 @@ class FollowUp(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     )
     reason: Mapped[Optional[str]] = mapped_column(String(512), nullable=True)
     assigned_to: Mapped[Optional[uuid.UUID]] = mapped_column(
-        UUID(as_uuid=True), nullable=True
+        Uuid(as_uuid=True), nullable=True
     )
     completed_at: Mapped[Optional[datetime]] = mapped_column(
         DateTime(timezone=True), nullable=True
@@ -191,7 +191,7 @@ class Notification(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     __tablename__ = "notifications"
 
     lead_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("leads.id"), nullable=False, index=True
+        Uuid(as_uuid=True), ForeignKey("leads.id"), nullable=False, index=True
     )
     channel: Mapped[str] = mapped_column(String(32), default="internal", nullable=False)
     title: Mapped[str] = mapped_column(String(255), nullable=False)
