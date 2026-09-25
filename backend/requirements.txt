@@ -7,9 +7,10 @@ pydantic>=2.9.0
 pydantic-settings>=2.6.0
 email-validator>=2.2.0
 
-# Database
+# Database (MySQL for local development)
 sqlalchemy[asyncio]>=2.0.36
-asyncpg>=0.30.0
+aiomysql>=0.2.0
+cryptography>=43.0.0
 alembic>=1.14.0
 
 # HTTP client (n8n / AI)
@@ -26,6 +27,5 @@ python-dotenv>=1.0.1
 # Dev / test
 pytest>=8.3.0
 pytest-asyncio>=0.24.0
-httpx>=0.28.0
 ruff>=0.8.0
 mypy>=1.13.0
