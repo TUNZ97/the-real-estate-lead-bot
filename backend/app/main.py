@@ -1,18 +1,35 @@
 """FastAPI application entrypoint."""
 
+import logging
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
+from app.api.v1.router import api_router
 from app.core.config import get_settings
+from app.db.session import engine
+from app.models import Base
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup hooks (DB pool, etc.) will be added in later phases
+    settings = get_settings()
+    # Dev convenience: create tables if missing. Prefer Alembic in staging/prod.
+    if settings.is_development:
+        try:
+            async with engine.begin() as conn:
+                await conn.run_sync(Base.metadata.create_all)
+            logger.info("Database tables ensured (create_all)")
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("Could not ensure tables on startup: %s", exc)
     yield
-    # Shutdown hooks
+    await engine.dispose()
 
 
 def create_app() -> FastAPI:
@@ -34,18 +51,31 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
+    @app.exception_handler(RequestValidationError)
+    async def validation_exception_handler(
+        request: Request, exc: RequestValidationError
+    ):
+        return JSONResponse(
+            status_code=422,
+            content={
+                "error": {
+                    "code": "VALIDATION_ERROR",
+                    "message": "Request validation failed",
+                    "details": exc.errors(),
+                },
+                "request_id": request.headers.get("x-request-id"),
+            },
+        )
+
     @app.get("/health", tags=["health"])
     async def health() -> dict:
         return {"status": "ok", "service": settings.app_name}
 
     @app.get("/ready", tags=["health"])
     async def ready() -> dict:
-        # Will check DB connectivity in Phase 2+
         return {"status": "ready"}
 
-    # API routers will be mounted here in Phase 3
-    # from app.api.v1.router import api_router
-    # app.include_router(api_router, prefix=settings.api_prefix)
+    app.include_router(api_router, prefix=settings.api_prefix)
 
     return app
 
