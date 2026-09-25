@@ -1,14 +1,22 @@
 """Application configuration loaded from environment variables."""
 
 from functools import lru_cache
+from pathlib import Path
 from typing import List
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+# Prefer repo-root .env, then backend/.env
+_ROOT_ENV = Path(__file__).resolve().parents[3] / ".env"
+_BACKEND_ENV = Path(__file__).resolve().parents[2] / ".env"
+_ENV_FILES = tuple(
+    str(p) for p in (_ROOT_ENV, _BACKEND_ENV) if p.is_file()
+) or (".env",)
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=_ENV_FILES,
         env_file_encoding="utf-8",
         case_sensitive=False,
         extra="ignore",
@@ -23,8 +31,9 @@ class Settings(BaseSettings):
     backend_port: int = 8000
     api_prefix: str = "/api"
 
+    # Local development uses MySQL on the host (no Docker required)
     database_url: str = (
-        "postgresql+asyncpg://postgres:postgres@localhost:5432/real_estate_lead_bot"
+        "mysql+aiomysql://root:password@127.0.0.1:3306/real_estate_lead_bot"
     )
 
     jwt_secret: str = "change-me-to-a-long-random-string"
