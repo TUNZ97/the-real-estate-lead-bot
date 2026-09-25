@@ -1,0 +1,19 @@
+{
+  "name": "WF-001 Lead Intake (placeholder)",
+  "notes": [
+    "Create a Webhook node in n8n with path: lead-intake",
+    "Method: POST",
+    "Expected body fields: event, conversation_id, message_id, lead_id, message, correlation_id",
+    "Optional: validate X-Webhook-Secret header against N8N_WEBHOOK_SECRET",
+    "Next nodes: call AI extraction → POST results back to FastAPI (future endpoint) or store in n8n for now",
+    "Backend already fires: {N8N_WEBHOOK_URL}/lead-intake after each customer message"
+  ],
+  "samplePayload": {
+    "event": "lead.intake",
+    "conversation_id": "uuid",
+    "message_id": "uuid",
+    "lead_id": "uuid",
+    "message": "3-bedroom apartment in Lekki, budget N80m",
+    "correlation_id": "uuid"
+  }
+}
